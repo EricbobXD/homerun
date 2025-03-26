@@ -1,0 +1,33 @@
+{
+    "MicroPython.executeButton": [
+        {
+            "text": "▶",
+            "tooltip": "Run",
+            "alignment": "left",
+            "command": "extension.executeFile",
+            "priority": 3.5
+        }
+    ],
+    "MicroPython.syncButton": [
+        {
+            "text": "$(sync)",
+            "tooltip": "sync",
+            "alignment": "left",
+            "command": "extension.execute",
+            "priority": 4
+        }
+    ],
+    "python.autoComplete.extraPaths": [
+        "D:/micropython-1.24.1/micropython-1.24.1/lib/micropython-lib/micropython",
+        "c:/Users/user/.vscode/extensions/rt-thread.rt-thread-micropython-1.0.11/microExamples/code-completion"
+    ],
+    "python.linting.pylintArgs": [
+        "--init-hook",
+        "sys.path.append('D:/micropython-1.24.1/micropython-1.24.1/lib/micropython-lib/micropython')",
+        "import sys; sys.path.append('c:/Users/user/.vscode/extensions/rt-thread.rt-thread-micropython-1.0.11/microExamples/code-completion')"
+    ],
+    "python.analysis.extraPaths": [
+        "D:/micropython-1.24.1/micropython-1.24.1/lib/micropython-lib/micropython",
+        "c:/Users/user/.vscode/extensions/rt-thread.rt-thread-micropython-1.0.11/microExamples/code-completion"
+    ]
+}
