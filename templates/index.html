@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>音檔處理系統</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            text-align: center;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 20px auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+        }
+        .upload-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-around;
+            gap: 15px;
+        }
+        .upload-section {
+            flex: 1;
+            min-width: 250px;
+            max-width: 300px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: #fafafa;
+        }
+        button {
+            padding: 10px 20px;
+            border: none;
+            background: #007bff;
+            color: white;
+            cursor: pointer;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .options {
+            display: none;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>音檔處理系統</h1>
+    <div class="container">
+        <div class="upload-container">
+            <div class="upload-section">
+                <h3>Transform</h3>
+                <input type="file" id="transform-input" accept=".wav">
+                <button data-action="transform">上傳並選擇</button>
+                <div class="options" id="transform-options">
+                    <button data-type="waveform">波形圖</button>
+                    <button data-type="spectrogram">頻譜圖</button>
+                </div>
+            </div>
+            <div class="upload-section">
+                <h3>Compare</h3>
+                <input type="file" id="compare-input" accept=".wav" multiple>
+                <button data-action="compare">上傳並選擇</button>
+                <div class="options" id="compare-options">
+                    <button data-type="waveform">波形圖</button>
+                    <button data-type="spectrogram">頻譜圖</button>
+                </div>
+            </div>
+            <div class="upload-section">
+                <h3>Encode</h3>
+                <input type="file" id="encode-input" accept=".wav">
+                <button data-action="encode">上傳並加密</button>
+            </div>
+            <div class="upload-section">
+                <h3>Decode</h3>
+                <input type="file" id="decode-input" accept=".wav">
+                <button data-action="decode">上傳並解密</button>
+            </div>
+        </div>
+        <h3>處理結果</h3>
+        <pre id="result"></pre>
+        <img id="output-image" style="max-width:100%; display:none;" alt="處理結果">
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const uploadButtons = document.querySelectorAll('button[data-action]');
+            const resultDisplay = document.getElementById('result');
+            const outputImage = document.getElementById('output-image');
+
+            uploadButtons.forEach(button => {
+                button.addEventListener('click', async (event) => {
+                    const action = event.target.dataset.action;
+                    const input = document.getElementById(`${action}-input`);
+                    const optionsDiv = document.getElementById(`${action}-options`);
+
+                    if (!input || input.files.length === 0) {
+                        alert('❌ 請選擇音檔');
+                        return;
+                    }
+
+                    if (action === 'compare' && input.files.length !== 2) {
+                        alert('❌ `Compare` 需要 **兩個** .wav 檔案');
+                        return;
+                    }
+
+                    if (optionsDiv) {
+                        optionsDiv.style.display = 'block';
+                        optionsDiv.querySelectorAll('button').forEach(optionButton => {
+                            optionButton.onclick = async () => {
+                                const type = optionButton.dataset.type;
+                                const formData = new FormData();
+
+                                if (action === 'compare') {
+                                    formData.append('file1', input.files[0]);
+                                    formData.append('file2', input.files[1]);
+                                    console.log(formData);
+                                } else {
+                                    formData.append('file', input.files[0]);
+                                }
+                                
+                                console.log(formData);
+                                formData.append('kind', type);
+
+                                try {
+                                    console.log(`📡 發送請求至後端: ${action}`);
+                                    const response = await fetch(`http://127.0.0.1:8000/${action}`, {
+                                        method: "POST",
+                                        body: formData
+                                    });
+
+                                    if (!response.ok) {
+                                        throw new Error(`HTTP error! 狀態碼: ${response.status}`);
+                                    }
+
+                                    const result = await response.json();
+                                    console.log("✅ 後端回應:", result);
+
+                                    let alertMessage = `📩 Status: ${result.status}`;
+                                    if (result.message) {
+                                        alertMessage += `\n📢 Message: ${result.message}`;
+                                    }
+                                    alert(alertMessage);
+
+                                    if (result.photo) {
+                                        outputImage.src = `http://127.0.0.1:8000/static/${result.photo}`;
+                                        outputImage.style.display = 'block';
+                                    } else {
+                                        outputImage.style.display = 'none';
+                                    }
+                                } catch (error) {
+                                    console.error('❌ 請求失敗:', error);
+                                    alert(`❌ 請求失敗，錯誤: ${error.message}`);
+                                }
+                            };
+                        });
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
