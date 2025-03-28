@@ -5,56 +5,73 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>音檔處理系統</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
-            text-align: center;
-            padding: 20px;
-        }
-        .container {
-            max-width: 800px;
-            margin: 20px auto;
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
-        }
-        .upload-container {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: space-around;
-            gap: 15px;
-        }
-        .upload-section {
-            flex: 1;
-            min-width: 250px;
-            max-width: 300px;
-            padding: 15px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            background: #fafafa;
-        }
-        button {
-            padding: 10px 20px;
-            border: none;
-            background: #007bff;
-            color: white;
-            cursor: pointer;
-            border-radius: 5px;
-            margin-top: 10px;
-        }
-        button:hover {
-            background: #0056b3;
-        }
-        .options {
-            display: none;
-            margin-top: 10px;
-        }
+body {
+    display: flex;
+    justify-content: flex-start; /* 讓內容靠右 */
+    align-items: center;
+    min-height: 100vh; /* 讓內容垂直置中 */
+    margin: 0;
+    background-color: #f4f4f4;
+    font-family: Arial, sans-serif;
+}
+
+.container {
+    width: 800px; /* 固定最大寬度 */
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+    margin-right: 20px; /* 讓內容稍微靠內，避免緊貼右邊 */
+}
+
+.upload-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between; /* 調整為間距分佈 */
+    gap: 15px;
+}
+
+.upload-section {
+    flex: 1;
+    min-width: 250px;
+    max-width: 300px;
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background: #fafafa;
+    text-align: center;
+}
+
+button {
+    padding: 10px 20px;
+    border: none;
+    background: #007bff;
+    color: white;
+    cursor: pointer;
+    border-radius: 5px;
+    margin-top: 10px;
+    transition: background 0.3s ease-in-out;
+}
+
+button:hover {
+    background: #0056b3;
+}
+
+.options {
+    display: none;
+    margin-top: 10px;
+}
+
+h1, h3 {
+    text-align: center;
+}
+
     </style>
 </head>
 <body>
-    <h1>音檔處理系統</h1>
+    
     <div class="container">
+        <h1>音檔處理系統</h1>
         <div class="upload-container">
             <div class="upload-section">
                 <h3>Transform</h3>
@@ -70,6 +87,7 @@
                 <input type="file" id="compare-input" accept=".wav" multiple>
                 <button data-action="compare">上傳並選擇</button>
                 <div class="options" id="compare-options">
+                    <button data-type="data">數據分析</button>
                     <button data-type="waveform">波形圖</button>
                     <button data-type="spectrogram">頻譜圖</button>
                 </div>
@@ -86,47 +104,83 @@
             </div>
         </div>
         <h3>處理結果</h3>
-        <pre id="result"></pre>
+        <pre id="resultarea"></pre>
         <img id="output-image" style="max-width:100%; display:none;" alt="處理結果">
     </div>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const uploadButtons = document.querySelectorAll('button[data-action]');
-            const resultDisplay = document.getElementById('result');
+            const resultDisplay = document.getElementById('resultarea');
             const outputImage = document.getElementById('output-image');
 
             uploadButtons.forEach(button => {
-                button.addEventListener('click', async (event) => {
+                button.addEventListener('click', async (event) => {  // 確保這裡是 async
                     const action = event.target.dataset.action;
                     const input = document.getElementById(`${action}-input`);
-                    const optionsDiv = document.getElementById(`${action}-options`);
-
+                    
                     if (!input || input.files.length === 0) {
                         alert('❌ 請選擇音檔');
                         return;
                     }
 
-                    if (action === 'compare' && input.files.length !== 2) {
-                        alert('❌ `Compare` 需要 **兩個** .wav 檔案');
+                    // encode 和 decode 不需要額外選項，所以直接發送請求
+                    if (action === 'encode' || action === 'decode') {
+                        const formData = new FormData();
+                        formData.append('file', input.files[0]);
+
+                        // 如果是 decode，則要求額外輸入密碼
+                        if (action === 'decode') {
+                            const psw = prompt("請輸入解密密碼：");
+                            if (!psw) {
+                                alert("❌ 請輸入密碼");
+                                return;
+                            }
+                            formData.append('psw', psw);
+                        }
+
+                        try {
+                            console.log(`📡 發送請求至後端: ${action}`);
+                            const response = await fetch(`http://127.0.0.1:8000/${action}`, {
+                                method: "POST",
+                                body: formData
+                            });
+
+                            if (!response.ok) {
+                                throw new Error(`HTTP error! 狀態碼: ${response.status}`);
+                            }
+
+                            const result = await response.json();
+                            console.log("✅ 後端回應:", result);
+
+                            let alertMessage = `📩 Status: ${result.status}`;
+                            if (result.message) {
+                                alertMessage += `\n📢 Message: ${result.message}`;
+                            }
+                            alert(alertMessage);
+                            resultDisplay.innerHTML = `${result.result}`;
+                            
+                        } catch (error) {
+                            console.error('❌ 請求失敗:', error);
+                            alert(`❌ 請求失敗，錯誤: ${error.message}`);
+                        }
                         return;
                     }
 
+                    // 如果有額外選項（例如 transform, compare），顯示選項按鈕
+                    const optionsDiv = document.getElementById(`${action}-options`);
                     if (optionsDiv) {
                         optionsDiv.style.display = 'block';
                         optionsDiv.querySelectorAll('button').forEach(optionButton => {
                             optionButton.onclick = async () => {
                                 const type = optionButton.dataset.type;
                                 const formData = new FormData();
-
                                 if (action === 'compare') {
                                     formData.append('file1', input.files[0]);
                                     formData.append('file2', input.files[1]);
-                                    console.log(formData);
                                 } else {
                                     formData.append('file', input.files[0]);
                                 }
-                                
-                                console.log(formData);
+
                                 formData.append('kind', type);
 
                                 try {
@@ -148,7 +202,8 @@
                                         alertMessage += `\n📢 Message: ${result.message}`;
                                     }
                                     alert(alertMessage);
-
+                                    resultDisplay.innerHTML = `${result.result}`;
+                                    
                                     if (result.photo) {
                                         outputImage.src = `http://127.0.0.1:8000/static/${result.photo}`;
                                         outputImage.style.display = 'block';
@@ -164,7 +219,7 @@
                     }
                 });
             });
-        });
+        })
     </script>
 </body>
 </html>
